@@ -5,7 +5,7 @@
  * @property {string} userColor - The color of the username
  * @property {Task[]} tasks - The tasks of the user
  * @method validateUsername - Validate the username of the user
- * @method addTask - Add tasks to the user
+ * @method addTask - Add a task to the user
  * @method editTask - Edit the task at the specified index
  * @method completeTask - Mark the task at index as complete
  * @method deleteTask - Delete the task at the specified index
@@ -55,14 +55,20 @@ export default class User {
 
 	/**
 	 * Edit the task at the specified index
-	 * @param {number} index - The index of the task to get
-	 * @param {string} description - The new task description
+	 * @param {number} index - The index of the task to edit
+	 * @param {string} [description] - The new task description
+	 * @param {number} [value] - The new task value
 	 * @returns {Task | null} The task that was edited
 	 */
-	editTask(index, description) {
+	editTask(index, description, value) {
 		let task = this.getTask(index);
 		if (task) {
-			task.setDescription(description);
+			if (description !== undefined) {
+				task.setDescription(description);
+			}
+			if (value !== undefined) {
+				task.setValue(value);
+			}
 			return task;
 		}
 		return null;
@@ -83,26 +89,26 @@ export default class User {
 	}
 
 	/**
-	 * Delete the task at the specified index
-	 * @param {number | number[]} indices - The indices of the tasks to delete
-	 * @returns {Task[]}	The task that was deleted
+	 * Delete the task(s) at the specified index/indices
+	 * @param {number | number[]} indices - The index or indices of the tasks to delete
+	 * @returns {Task[]} The tasks that were deleted
 	 */
 	deleteTask(indices) {
 		const items = [].concat(indices).filter((i) => {
 			return this.validTaskIndex(i);
 		});
-		const taskForDeletion = [];
+		const tasksForDeletion = [];
 
 		this.tasks = this.tasks.filter((task, i) => {
 			if (items.includes(i)) {
-				taskForDeletion.push(task);
+				tasksForDeletion.push(task);
 				return false;
 			} else {
 				return true;
 			}
 		});
 
-		return taskForDeletion;
+		return tasksForDeletion;
 	}
 
 	/**

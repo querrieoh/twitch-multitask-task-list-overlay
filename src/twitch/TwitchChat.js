@@ -125,7 +125,7 @@ export default class TwitchChat extends EventEmitter {
 					this.#reconnectInterval = this.#reconnectInterval * 2;
 					break;
 				case 1012:
-					console.log(`Switching  servers...`);
+					console.log(`Switching servers...`);
 					this.connect();
 					break;
 				default:
@@ -171,17 +171,25 @@ export default class TwitchChat extends EventEmitter {
  * @returns {Object}
  */
 function convertToCommandFormat(message) {
-	return {
-		user: message.tags["display-name"],
-		command: message.command.botCommand,
+	const commandData = {
+		user: message.tags["display-name"] || message.source?.nick || "Unknown",
+		command: message.command.botCommand || "",
 		message: message.command.botCommandParams || "",
 		flags: {
 			broadcaster: !!message.tags.badges?.broadcaster,
 			mod: !!message.tags.badges?.moderator,
 		},
 		extra: {
-			userColor: message.tags.color,
-			messageId: message.tags.id,
+			userColor: message.tags.color || "#FFFFFF",
+			messageId: message.tags.id || "",
 		},
 	};
+
+	// Include taskDescription and taskValue if available
+	if (commandData.command.toLowerCase() === "taskadd" && message.command.taskDescription) {
+		commandData.taskDescription = message.command.taskDescription;
+		commandData.taskValue = message.command.taskValue;
+	}
+
+	return commandData;
 }

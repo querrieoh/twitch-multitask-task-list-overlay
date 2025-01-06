@@ -1,10 +1,13 @@
 /**
  * @class Task
  * @property {string} description - The description of the task.
- * @property {number} id - The id of the task.
+ * @property {number} value - The numerical value of the task.
+ * @property {string} id - The id of the task.
  * @property {boolean} completionStatus - Indicates whether the task is complete or not.
  * @method validateDescription - Validate the description of the task.
+ * @method validateValue - Validate the value of the task.
  * @method setDescription - Set the description of the task.
+ * @method setValue - Set the value of the task.
  * @method isComplete - Get the completion status of the task.
  * @method setCompletionStatus - Set the status of the task.
  * @returns {Task}
@@ -13,9 +16,11 @@ export default class Task {
 	/**
 	 * @constructor
 	 * @param {string} description - The description of the task.
+	 * @param {number} value - The numerical value of the task.
 	 */
-	constructor(description) {
+	constructor(description, value) {
 		this.description = this.validateDescription(description);
+		this.value = this.validateValue(value);
 		this.id = this.#assignId();
 		this.completionStatus = false;
 	}
@@ -23,7 +28,7 @@ export default class Task {
 	/**
 	 * Validate the description of the task.
 	 * @param {string} description - The description of the task.
-	 * @returns {string} The description of the task.
+	 * @returns {string} The validated description of the task.
 	 * @throws {Error} If the description is invalid.
 	 */
 	validateDescription(description) {
@@ -32,14 +37,30 @@ export default class Task {
 		}
 		description = description.trim();
 		if (description.length === 0) {
-			throw new Error("Task description invalid");
+			throw new Error("Task description cannot be empty");
 		}
 		return description;
 	}
 
 	/**
-	 * Assign the current date as id to the task.
-	 * @returns {string}
+	 * Validate the value of the task.
+	 * @param {number} value - The value of the task.
+	 * @returns {number} The validated value of the task.
+	 * @throws {Error} If the value is invalid.
+	 */
+	validateValue(value) {
+		if (typeof value !== "number" || isNaN(value)) {
+			throw new Error("Task value must be a valid number");
+		}
+		if (value <= 0) {
+			throw new Error("Task value must be greater than zero");
+		}
+		return value;
+	}
+
+	/**
+	 * Assign a unique ID to the task based on the current date and a random salt.
+	 * @returns {string} The unique ID of the task.
 	 */
 	#assignId() {
 		const now = new Date();
@@ -49,30 +70,41 @@ export default class Task {
 		const second = String(now.getSeconds()).padStart(2, "0");
 		const millisecond = String(now.getMilliseconds()).padStart(3, "0");
 		const salt = Math.floor(Math.random() * 10000);
-		// format: DDHHMMSSMS + 4 digit salt
+		// Format: DDHHMMSSMS + 4-digit salt
 		return `${day}${hour}${minute}${second}${millisecond}${salt}`;
 	}
 
 	/**
 	 * Set the description of the task.
 	 * @param {string} description - The new description of the task.
-	 * @return void
+	 * @returns {void}
 	 */
 	setDescription(description) {
 		this.description = this.validateDescription(description);
 	}
 
 	/**
-	 * Get the status of the task.
-	 * @returns {boolean} The status of the task.
+	 * Set the value of the task.
+	 * @param {number} value - The new value of the task.
+	 * @returns {void}
+	 */
+	setValue(value) {
+		this.value = this.validateValue(value);
+	}
+
+	/**
+	 * Get the completion status of the task.
+	 * @returns {boolean} The completion status of the task.
 	 */
 	isComplete() {
 		return this.completionStatus;
 	}
 
 	/**
-	 * Set the status of the task.
-	 * @param {boolean} status - The new status of the task.
+	 * Set the completion status of the task.
+	 * @param {boolean} status - The new completion status of the task.
+	 * @returns {void}
+	 * @throws {Error} If the status is not a boolean.
 	 */
 	setCompletionStatus(status) {
 		if (typeof status !== "boolean") {

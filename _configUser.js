@@ -91,3 +91,85 @@ const _userConfig = {
     },
   },
 };
+
+export default _userConfig;
+
+/**
+ * @typedef {Object} UserConfig
+ * @property {Object} commands - The available user commands
+ * @property {string[]} commands.addTask - Commands to add a task
+ * @property {string[]} commands.editTask - Commands to edit a task
+ * @property {string[]} commands.finishTask - Commands to finish a task
+ * @property {string[]} commands.deleteTask - Commands to delete a task
+ * @property {string[]} commands.check - Commands to check tasks
+ * @property {string[]} commands.help - Commands to display help
+ * @property {string[]} commands.additional - Additional commands
+ * @property {Object} responseTo - Responses based on languages
+ * @property {Object} responseTo.EN - English responses
+ * @property {string} responseTo.EN.addTask - Add task response
+ * @property {string} responseTo.EN.editTask - Edit task response
+ * @property {string} responseTo.EN.finishTask - Finish task response
+ * @property {string} responseTo.EN.deleteTask - Delete task response
+ * @property {string} responseTo.EN.deleteAll - Delete all tasks response
+ * @property {string} responseTo.EN.check - Check tasks response
+ * @property {string} responseTo.EN.help - Help response
+ * @property {string} responseTo.EN.additional - Additional info response
+ * @property {string} responseTo.EN.maxTasksAdded - Max tasks reached response
+ * @property {string} responseTo.EN.noTaskFound - No task found response
+ * @property {string} responseTo.EN.invalidCommand - Invalid command response
+ * @property {Object} responseTo.ES - Spanish responses
+ * @property {string} responseTo.ES.addTask
+ * @property {string} responseTo.ES.editTask
+ * @property {string} responseTo.ES.finishTask
+ * @property {string} responseTo.ES.deleteTask
+ * @property {string} responseTo.ES.deleteAll
+ * @property {string} responseTo.ES.check
+ * @property {string} responseTo.ES.help
+ * @property {string} responseTo.ES.additional
+ * @property {string} responseTo.ES.maxTasksAdded
+ * @property {string} responseTo.ES.noTaskFound
+ * @property {string} responseTo.ES.invalidCommand
+ * @property {Object} responseTo.FR - French responses
+ * @property {string} responseTo.FR.addTask
+ * @property {string} responseTo.FR.editTask
+ * @property {string} responseTo.FR.finishTask
+ * @property {string} responseTo.FR.deleteTask
+ * @property {string} responseTo.FR.deleteAll
+ * @property {string} responseTo.FR.check
+ * @property {string} responseTo.FR.help
+ * @property {string} responseTo.FR.additional
+ * @property {string} responseTo.FR.maxTasksAdded
+ * @property {string} responseTo.FR.noTaskFound
+ * @property {string} responseTo.FR.invalidCommand
+ * @property {Object} responseTo.JP - Japanese responses
+ * @property {string} responseTo.JP.addTask
+ * @property {string} responseTo.JP.editTask
+ * @property {string} responseTo.JP.finishTask
+ * @property {string} responseTo.JP.deleteTask
+ * @property {string} responseTo.JP.deleteAll
+ * @property {string} responseTo.JP.check
+ * @property {string} responseTo.JP.help
+ * @property {string} responseTo.JP.additional
+ * @property {string} responseTo.JP.maxTasksAdded
+ * @property {string} responseTo.JP.noTaskFound
+ * @property {string} responseTo.JP.invalidCommand
+ * @property {Object} responseTo.UA - Ukrainian responses
+ * @property {string} responseTo.UA.addTask
+ * @property {string} responseTo.UA.editTask
+ * @property {string} responseTo.UA.finishTask
+ * @property {string} responseTo.UA.deleteTask
+ * @property {string} responseTo.UA.deleteAll
+ * @property {string} responseTo.UA.check
+ * @property {string} responseTo.UA.help
+ * @property {string} responseTo.UA.additional
+ * @property {string} responseTo.UA.maxTasksAdded
+ * @property {string} responseTo.UA.noTaskFound
+ * @property {string} responseTo.UA.invalidCommand
+ */
+
+/**
+ * Define the structure and default values for user responses and commands.
+ * Allows easy addition of new languages and customization of command triggers.
+ */
+
+export default _userConfig;

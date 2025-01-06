@@ -6,14 +6,14 @@ import Task from "./Task.js";
  * @property {User[]} users
  * @property {number} tasksCompleted
  * @property {number} totalTasks
- * @method getUser - Get the user at the specified index
+ * @method getUser - Get the user by username
  * @method getAllUsers - Get all users
  * @method createUser - Create a new user
- * @method addUserTasks - Add a tasks to the specified user
+ * @method addUserTasks - Add tasks to the specified user
  * @method editUserTask - Edit the task at the specified index
  * @method completeUserTasks - Mark specified tasks as complete
  * @method deleteUserTasks - Delete tasks at specified indices
- * @method checkUserTasks - Get remaining tasks
+ * @method checkUserTasks - Get tasks based on completion status
  * @method clearUserList - Clear user list
  * @method clearDoneTasks - Clear all done tasks
  * @method deleteUser - Delete the user
@@ -45,21 +45,24 @@ export default class UserList {
 				const user = new User(lsUser.username, {
 					userColor: lsUser.userColor,
 				});
-				lsUser.tasks.map((task) => {
-					const newTask = user.addTask(new Task(task.description));
-					this.totalTasks++;
-					if (task.completionStatus) {
-						newTask.setCompletionStatus(task.completionStatus);
-						this.tasksCompleted++;
+				lsUser.tasks.forEach((task) => {
+					try {
+						const newTask = new Task(task.description, task.value);
+						newTask.id = task.id;
+						newTask.completionStatus = task.completionStatus;
+						user.addTask(newTask);
+						this.totalTasks++;
+						if (newTask.isComplete()) {
+							this.tasksCompleted++;
+						}
+					} catch (error) {
+						console.error(`Error loading task for user ${lsUser.username}:`, error);
 					}
 				});
 				userList.push(user);
 			});
 		} else {
-			localStorage.setItem(
-				this.#localStoreName,
-				JSON.stringify(userList)
-			);
+			localStorage.setItem(this.#localStoreName, JSON.stringify(userList));
 		}
 		return userList;
 	}
@@ -69,7 +72,17 @@ export default class UserList {
 	 * @returns {void}
 	 */
 	#commitToLocalStorage() {
-		localStorage.setItem(this.#localStoreName, JSON.stringify(this.users));
+		const data = this.users.map((user) => ({
+			username: user.username,
+			userColor: user.userColor,
+			tasks: user.getTasks().map((task) => ({
+				description: task.description,
+				value: task.value,
+				id: task.id,
+				completionStatus: task.completionStatus,
+			})),
+		}));
+		localStorage.setItem(this.#localStoreName, JSON.stringify(data));
 	}
 
 	/**
@@ -78,7 +91,7 @@ export default class UserList {
 	 * @returns {User | undefined} The user
 	 */
 	getUser(username) {
-		return this.users.find((user) => user.username === username);
+		return this.users.find((user) => user.username.toLowerCase() === username.toLowerCase());
 	}
 
 	/**
@@ -92,7 +105,7 @@ export default class UserList {
 	/**
 	 * Create new user
 	 * @param {string} username - The username of the user
-	 * @param {{userColor: string}} options - The username of the user
+	 * @param {{userColor: string}} options - The options for the user
 	 * @throws {Error} If the user already exists
 	 * @returns {User} The newly created User object
 	 */
@@ -102,26 +115,32 @@ export default class UserList {
 		}
 		const user = new User(username, options);
 		this.users.push(user);
+		this.#commitToLocalStorage();
 		return user;
 	}
 
 	/**
 	 * Add tasks to a user
 	 * @param {string} username - The username of the user
-	 * @param {string | string[]} taskDescriptions - The task to add
+	 * @param {Array<{description: string, value: number}>} taskDescriptions - The tasks to add
 	 * @throws {Error} If user does not exist
-	 * @returns {Task[]} The description of the added task
+	 * @returns {Task[]} The added tasks
 	 */
 	addUserTasks(username, taskDescriptions) {
 		const user = this.getUser(username);
 		if (!user) {
 			throw new Error(`${username} does not exist`);
 		}
-		const descriptions = [].concat(taskDescriptions);
 		const tasks = [];
-		descriptions.forEach((taskDesc) => {
-			tasks.push(user.addTask(new Task(taskDesc)));
-			this.totalTasks++;
+		taskDescriptions.forEach((taskDesc) => {
+			try {
+				const newTask = new Task(taskDesc.description, taskDesc.value);
+				user.addTask(newTask);
+				tasks.push(newTask);
+				this.totalTasks++;
+			} catch (error) {
+				console.error(`Error adding task to user ${username}:`, error);
+			}
 		});
 		this.#commitToLocalStorage();
 		return tasks;
@@ -131,16 +150,17 @@ export default class UserList {
 	 * Edit the task at the specified index
 	 * @param {string} username - The username of the user
 	 * @param {number} taskIndex - The index of the task to edit
-	 * @param {string} taskDescription - The new task value
+	 * @param {string} [taskDescription] - The new task description
+	 * @param {number} [taskValue] - The new task value
 	 * @throws {Error} User or Index not found
 	 * @returns {Task} The edited task
 	 */
-	editUserTask(username, taskIndex, taskDescription) {
+	editUserTask(username, taskIndex, taskDescription, taskValue) {
 		const user = this.getUser(username);
 		if (!user) {
 			throw new Error(`${username} has no tasks`);
 		}
-		const task = user.editTask(taskIndex, taskDescription);
+		const task = user.editTask(taskIndex, taskDescription, taskValue);
 		if (!task) {
 			throw new Error(`Task ${taskIndex} not found`);
 		}
@@ -151,9 +171,9 @@ export default class UserList {
 	/**
 	 * Mark the user tasks as complete
 	 * @param {string} username - The username of the user
-	 * @param {number | number[]} indices - The index of the task to complete
+	 * @param {number | number[]} indices - The index or indices of the tasks to complete
 	 * @throws {Error} User not found
-	 * @returns {Task[]} The description of the completed task
+	 * @returns {Task[]} The completed tasks
 	 */
 	completeUserTasks(username, indices) {
 		const user = this.getUser(username);
@@ -162,12 +182,11 @@ export default class UserList {
 		}
 		const tasks = [].concat(indices).reduce((acc, curr) => {
 			const task = user.getTask(curr);
-			if (!task) return acc;
-			if (!task.isComplete()) {
+			if (task && !task.isComplete()) {
 				task.setCompletionStatus(true);
 				this.tasksCompleted++;
+				acc.push(task);
 			}
-			acc.push(task);
 			return acc;
 		}, []);
 		this.#commitToLocalStorage();
@@ -177,29 +196,36 @@ export default class UserList {
 	/**
 	 * Delete the user tasks
 	 * @param {string} username - The username of the user
-	 * @param {number | number[]} indices - The index of the task to delete
+	 * @param {number | number[]} indices - The index or indices of the tasks to delete
 	 * @throws {Error} User not found
-	 * @returns {Task[]} The deleted task description
+	 * @returns {Task[]} The deleted tasks
 	 */
 	deleteUserTasks(username, indices) {
 		const user = this.getUser(username);
 		if (!user) {
 			throw new Error(`User ${username} not found`);
 		}
-		const items = [].concat(indices);
-		const tasks = user.deleteTask(items);
+		const items = [].concat(indices).filter((i) => {
+			return user.validTaskIndex(i);
+		});
+		const tasksForDeletion = user.deleteTask(items);
+		tasksForDeletion.forEach((task) => {
+			if (task.isComplete()) {
+				this.tasksCompleted--;
+			}
+			this.totalTasks--;
+		});
 		if (user.getTasks().length === 0) {
 			this.deleteUser(username);
 		}
-		this.decreaseTaskCount(tasks);
 		this.#commitToLocalStorage();
-		return tasks;
+		return tasksForDeletion;
 	}
 
 	/**
-	 * Get tasks specified by status of a user
+	 * Check and retrieve tasks based on completion status
 	 * @param {string} username - The username of the user
-	 * @param {string} status - The completion status of the task
+	 * @param {string} status - The completion status ("complete" or "incomplete")
 	 * @returns {Map<number, Task>} The tasks specified by status
 	 */
 	checkUserTasks(username, status = "incomplete") {
@@ -238,7 +264,12 @@ export default class UserList {
 		let tasks = [];
 		this.users.forEach((user) => {
 			let removedTasks = user.removeCompletedTasks();
-			this.decreaseTaskCount(removedTasks);
+			removedTasks.forEach((task) => {
+				if (task.isComplete()) {
+					this.tasksCompleted--;
+				}
+				this.totalTasks--;
+			});
 			tasks = tasks.concat(removedTasks);
 		});
 		this.#commitToLocalStorage();
@@ -247,23 +278,24 @@ export default class UserList {
 
 	/**
 	 * Delete a user by username
-	 * @param {string} username - The username of the user
+	 * @param {string} username - The username of the user to delete
 	 * @throws {Error} If the user is not found
 	 * @returns {User} The deleted user
 	 */
 	deleteUser(username) {
 		const userIndex = this.users.findIndex(
-			(user) => {
-				let regex = RegExp(`^${username}`, 'i');
-				return regex.test(user.username);
-			}
+			(user) => user.username.toLowerCase() === username.toLowerCase()
 		);
 		if (userIndex === -1) {
 			throw new Error(`${username} not found`);
 		}
-		const user = this.users[userIndex];
-		const deletedUser = this.users.splice(userIndex, 1)[0];
-		this.decreaseTaskCount(deletedUser.getTasks());
+		const user = this.users.splice(userIndex, 1)[0];
+		user.getTasks().forEach((task) => {
+			if (task.isComplete()) {
+				this.tasksCompleted--;
+			}
+			this.totalTasks--;
+		});
 		this.#commitToLocalStorage();
 		return user;
 	}

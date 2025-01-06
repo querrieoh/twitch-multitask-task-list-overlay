@@ -161,8 +161,7 @@ function parseCommand(rawCommandComponent) {
  * @returns {object}
  */
 function parseTags(tags) {
-	// badge-info=;badges=broadcaster/1;color=#0000FF;...
-
+	// badge-info=;badges=broadcaster/1,color=#0000FF;...
 	const tagsToIgnore = {
 		// List of tags to ignore.
 		"client-nonce": null,
@@ -276,6 +275,19 @@ function parseParameters(rawParametersComponent, command) {
 	} else {
 		command.botCommand = commandParts.slice(0, paramsIdx);
 		command.botCommandParams = commandParts.slice(paramsIdx).trim();
+	}
+
+	// Additional parsing for task commands to separate description and value
+	if (["taskAdd", "taskedit"].includes(command.botCommand.toLowerCase())) {
+		const paramParts = command.botCommandParams.split(":");
+		if (paramParts.length === 2) {
+			command.taskDescription = paramParts[0].trim();
+			command.taskValue = parseFloat(paramParts[1].trim());
+		} else {
+			// Handle cases where value is not provided or format is incorrect
+			command.taskDescription = command.botCommandParams.trim();
+			command.taskValue = null;
+		}
 	}
 
 	return command;

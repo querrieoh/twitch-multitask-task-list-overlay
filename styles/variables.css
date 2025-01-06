@@ -1,4 +1,6 @@
 :root {
+	/* Existing Variables */
+
 	/* fonts available @ https://fonts.google.com */
 	--header-font-family: Roboto Mono;
 	--card-font-family: Roboto Mono;
@@ -38,4 +40,24 @@
 	--task-done-font-color: #aaaaaa;
 	--task-done-font-style: italic;
 	--task-done-text-decoration: line-through;
+
+	/* ======= New Variables for Controls and Progress Bar ======= */
+
+	/* Controls Section */
+	--controls-background-color: rgba(0, 0, 0, 0.7);
+	--controls-padding: 20px;
+
+	/* Task Form */
+	--task-form-input-padding: 10px;
+
+	/* Goal Settings */
+	--goal-settings-label-color: #ffffff;
+	--manual-goal-input-padding: 10px;
+
+	/* Progress Bar */
+	--progress-container-background-color: #ddd;
+	--progress-bar-color: #4caf50;
+	--progress-bar-completed-color: #2196F3;
+	--progress-bar-height: 30px;
+	--progress-text-color: #ffffff;
 }

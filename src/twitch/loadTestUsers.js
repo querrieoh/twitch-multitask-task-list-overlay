@@ -36,12 +36,12 @@ export function loadTestUsers(twitchClient) {
 		const userColor = colorOptions[i - 1];
 
 		for (let j = 0; j < maxTasksPerUser; j++) {
+			const taskValue = (j + 1) * 10; // Assigning values 10, 20, 30, etc.
+			const taskDescription = `test task description ${j === 2 ? "longer text example" : ""}`;
 			const data = {
 				user: userName,
-				command: "task",
-				message: `test task description ${
-					j === 2 ? "longer text example" : ""
-				}`,
+				command: "taskAdd",
+				message: `${taskDescription}:${taskValue}`,
 				flags: { broadcaster: true, mod: false },
 				extra: {
 					userColor: userColor,

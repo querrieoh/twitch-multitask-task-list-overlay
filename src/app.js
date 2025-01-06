@@ -2,6 +2,7 @@ import { animateScroll } from "./animations/animateScroll.js";
 import { fadeInOutText } from "./animations/fadeCommands.js";
 import { loadStyles } from "./styleLoader.js";
 import UserList from "./classes/UserList.js";
+import Task from "./classes/Task.js"; // Import the updated Task class
 import { timerAudioEl } from "./Timer.js";
 
 /** @typedef {import("./classes/User").default} User */
@@ -9,11 +10,13 @@ import { timerAudioEl } from "./Timer.js";
 /**
  * @class App
  * @property {UserList} userList - The user list
+ * @property {Object} goal - The goal configuration
  * @method render - Render the task list to the DOM
  * @method chatHandler - Handles chat commands and responses
  */
 export default class App {
 	#timerIntervalId = null;
+
 	/**
 	 * @constructor
 	 * @param {string} storeName - The store name
@@ -21,6 +24,69 @@ export default class App {
 	constructor(storeName) {
 		this.userList = new UserList(storeName);
 		loadStyles(_styles);
+
+		// Initialize goal
+		this.goal = {
+			value: 0,
+			autoSet: true
+		};
+
+		// Bind UI event listeners
+		this.bindUIEvents();
+	}
+
+	/**
+	 * Bind event listeners for UI elements like task form and goal settings
+	 */
+	bindUIEvents() {
+		// Task Form Submission
+		const taskForm = document.getElementById('task-form');
+		taskForm.addEventListener('submit', (e) => {
+			e.preventDefault();
+			const taskName = document.getElementById('task-name').value.trim();
+			const taskValue = parseFloat(document.getElementById('task-value').value);
+			if (taskName && taskValue > 0) {
+				try {
+					const newTask = new Task(taskName, taskValue);
+					// Assign tasks to a default user or a specific user as needed
+					const user = this.userList.getUser("default") || this.userList.createUser("default", { userColor: "#FFFFFF" });
+					this.userList.addUserTask(user.username, newTask.description, newTask.value);
+					this.addTaskToDOM(user, newTask);
+					this.updateGoal();
+					this.updateProgress();
+					// Clear form inputs
+					document.getElementById('task-name').value = '';
+					document.getElementById('task-value').value = '';
+				} catch (error) {
+					console.error("Error adding task:", error);
+				}
+			}
+		});
+
+		// Goal Settings Toggle
+		const autoSetGoalCheckbox = document.getElementById('auto-set-goal');
+		autoSetGoalCheckbox.addEventListener('change', (e) => {
+			this.goal.autoSet = e.target.checked;
+			const manualGoalContainer = document.getElementById('manual-goal');
+			if (this.goal.autoSet) {
+				manualGoalContainer.style.display = 'none';
+				this.updateGoal();
+			} else {
+				manualGoalContainer.style.display = 'block';
+			}
+		});
+
+		// Manual Goal Input
+		const manualGoalInput = document.getElementById('goal-value');
+		manualGoalInput.addEventListener('input', (e) => {
+			if (!this.goal.autoSet) {
+				const manualGoal = parseFloat(e.target.value);
+				if (!isNaN(manualGoal) && manualGoal > 0) {
+					this.goal.value = manualGoal;
+					this.updateProgress();
+				}
+			}
+		});
 	}
 
 	/**
@@ -30,6 +96,7 @@ export default class App {
 	render() {
 		this.renderTaskList();
 		this.renderTaskHeader();
+		this.renderProgress();
 	}
 
 	/**
@@ -48,7 +115,7 @@ export default class App {
 				const listItem = document.createElement("li");
 				listItem.classList.add("task");
 				listItem.dataset.taskId = `${task.id}`;
-				listItem.innerText = task.description;
+				listItem.innerText = `${task.description} (${task.value})`; // Display task value
 				if (task.isComplete()) {
 					listItem.classList.add("done");
 				}
@@ -57,16 +124,12 @@ export default class App {
 			fragment.appendChild(cardEl);
 		});
 		const primaryClone = fragment.cloneNode(true);
-		const primaryContainer = document.querySelector(
-			".task-container.primary"
-		);
+		const primaryContainer = document.querySelector(".task-container.primary");
 		primaryContainer.innerHTML = "";
 		primaryContainer.appendChild(primaryClone);
 
 		const secondaryClone = fragment.cloneNode(true);
-		const secondaryContainer = document.querySelector(
-			".task-container.secondary"
-		);
+		const secondaryContainer = document.querySelector(".task-container.secondary");
 		secondaryContainer.innerHTML = "";
 		secondaryContainer.appendChild(secondaryClone);
 
@@ -90,15 +153,11 @@ export default class App {
 	}
 
 	/**
-	 * Render the task count to the DOM
+	 * Render the task count and update progress
 	 * @returns {void}
 	 */
 	renderTaskCount() {
-		let completedTasksCount = this.userList.tasksCompleted;
-		let totalTasksCount = this.userList.totalTasks;
-		/** @type {HTMLElement} */
-		const totalTasksElement = document.querySelector(".task-count");
-		totalTasksElement.innerText = `${completedTasksCount}/${totalTasksCount}`;
+		this.updateProgress();
 	}
 
 	/**
@@ -241,19 +300,27 @@ export default class App {
 				if (message === "") {
 					throw new Error("Task description is empty");
 				}
-				let user =
+
+				// Parse tasks with values, assuming format "task1:10, task2:20"
+				const taskDescriptions = message.split(",").map(taskStr => {
+					const [desc, val] = taskStr.split(":").map(s => s.trim());
+					if (!desc || isNaN(parseFloat(val)) || parseFloat(val) <= 0) {
+						throw new Error(`Invalid task format: "${taskStr}". Use "description:value".`);
+					}
+					return { description: desc, value: parseFloat(val) };
+				});
+
+				const user =
 					this.userList.getUser(username) ||
 					this.userList.createUser(username, {
 						userColor: extra.userColor,
 					});
 
-				const taskDescriptions = message.split(", ");
 				if (
 					user.getTasks().length + taskDescriptions.length >
 					parseInt(maxTasksPerUser.toString(), 10)
 				) {
-					template =
-						_userConfig.responseTo[languageCode].maxTasksAdded;
+					template = _userConfig.responseTo[languageCode].maxTasksAdded;
 				} else {
 					const tasks = this.userList.addUserTasks(
 						username,
@@ -262,7 +329,7 @@ export default class App {
 					tasks.forEach((task) => {
 						this.addTaskToDOM(user, task);
 					});
-					responseDetail = message;
+					responseDetail = taskDescriptions.map(t => `${t.description}:${t.value}`).join(", ");
 					template = _userConfig.responseTo[languageCode].addTask;
 				}
 			} else if (_userConfig.commands.editTask.includes(command)) {
@@ -297,7 +364,8 @@ export default class App {
 					this.completeTaskFromDOM(id);
 				});
 				if (tasks.length === 0) {
-					template = _userConfig.responseTo[languageCode].noTaskFound;
+					template =
+						_userConfig.responseTo[languageCode].noTaskFound;
 				} else {
 					responseDetail = tasks.reduce((acc, task, i, list) => {
 						let taskDesc =
@@ -344,7 +412,7 @@ export default class App {
 				const taskMap = this.userList.checkUserTasks(username);
 				const list = [];
 				for (let [taskNumber, task] of taskMap) {
-					list.push(`${taskNumber + 1}. ${task.description}`);
+					list.push(`${taskNumber + 1}. ${task.description} (${task.value})`);
 				}
 				responseDetail = list.join(" | ");
 				if (responseDetail === "") {
@@ -374,31 +442,59 @@ export default class App {
 		}
 	}
 
-	clearListFromDOM() {
-		const primaryContainer = document.querySelector(
-			".task-container.primary"
+	/**
+	 * Render the progress bar
+	 * @returns {void}
+	 */
+	renderProgress() {
+		const progressContainer = document.getElementById('progress-container');
+		const progressBar = document.getElementById('progress-bar');
+		const progressText = document.getElementById('progress-text');
+		// Initially set to 0
+		progressBar.style.width = '0%';
+		progressText.textContent = '0%';
+	}
+
+	/**
+	 * Update the progress based on completed task values
+	 * @returns {void}
+	 */
+	updateProgress() {
+		const completedTasks = this.userList.getAllUsers().flatMap(user =>
+			user.tasks.filter(task => task.isComplete())
 		);
-		const secondaryContainer = document.querySelector(
-			".task-container.secondary"
-		);
-		primaryContainer.innerHTML = "";
-		secondaryContainer.innerHTML = "";
-		this.renderTaskCount();
+		const totalCompletedValue = completedTasks.reduce((sum, task) => sum + task.value, 0);
+		const totalTaskValue = this.goal.autoSet ? 
+			this.userList.getAllUsers().flatMap(user => user.tasks).reduce((sum, task) => sum + task.value, 0) : 
+			this.goal.value;
+		const progressPercent = totalTaskValue > 0 ? Math.min((totalCompletedValue / totalTaskValue) * 100, 100) : 0;
+		const progressBar = document.getElementById('progress-bar');
+		const progressText = document.getElementById('progress-text');
+
+		progressBar.style.width = `${progressPercent}%`;
+		progressText.textContent = `${progressPercent.toFixed(2)}%`;
+
+		// Change color if goal met
+		if (totalCompletedValue >= totalTaskValue && totalTaskValue > 0) {
+			progressBar.classList.add('completed');
+		} else {
+			progressBar.classList.remove('completed');
+		}
+
+		// Update task count display
+		const taskCountSpan = document.querySelector('.task-count');
+		taskCountSpan.innerText = `${totalCompletedValue}/${totalTaskValue}`;
 	}
 
 	/**
 	 * Add the task to the DOM
 	 * @param {User} user
-	 * @param {{description: string, id: string}} task
+	 * @param {Task} task
 	 * @returns {void}
 	 */
 	addTaskToDOM(user, task) {
-		const primaryContainer = document.querySelector(
-			".task-container.primary"
-		);
-		const secondaryContainer = document.querySelector(
-			".task-container.secondary"
-		);
+		const primaryContainer = document.querySelector(".task-container.primary");
+		const secondaryContainer = document.querySelector(".task-container.secondary");
 		const userCardEls = document.querySelectorAll(
 			`[data-user="${user.username}"]`
 		);
@@ -411,7 +507,7 @@ export default class App {
 		const taskElement = document.createElement("li");
 		taskElement.classList.add("task");
 		taskElement.dataset.taskId = `${task.id}`;
-		taskElement.innerText = task.description;
+		taskElement.innerText = `${task.description} (${task.value})`; // Display task value
 		const cloneTaskElement = taskElement.cloneNode(true);
 
 		primaryContainer
@@ -422,12 +518,13 @@ export default class App {
 			.appendChild(cloneTaskElement);
 
 		this.renderTaskCount();
+		this.updateProgress();
 		animateScroll();
 	}
 
 	/**
 	 * Edit the task description in the DOM
-	 * @param {{description: string, id: string}} task
+	 * @param {Task} task
 	 * @returns {void}
 	 */
 	editTaskFromDOM(task) {
@@ -436,8 +533,9 @@ export default class App {
 			`[data-task-id="${task.id}"]`
 		);
 		for (const taskElement of taskElements) {
-			taskElement.innerText = task.description;
+			taskElement.innerText = `${task.description} (${task.value})`;
 		}
+		this.updateProgress();
 	}
 
 	/**
@@ -452,7 +550,7 @@ export default class App {
 		for (const taskElement of taskElements) {
 			taskElement.classList.add("done");
 		}
-		this.renderTaskCount();
+		this.updateProgress();
 	}
 
 	/**
@@ -472,7 +570,7 @@ export default class App {
 				taskElement.remove();
 			}
 		}
-		this.renderTaskCount();
+		this.updateProgress();
 	}
 
 	/**
@@ -489,7 +587,19 @@ export default class App {
 		for (let card of userCardEls) {
 			card.remove();
 		}
-		this.renderTaskCount();
+		this.updateProgress();
+	}
+
+	/**
+	 * Clear all tasks from the DOM
+	 * @returns {void}
+	 */
+	clearListFromDOM() {
+		const primaryContainer = document.querySelector(".task-container.primary");
+		const secondaryContainer = document.querySelector(".task-container.secondary");
+		primaryContainer.innerHTML = "";
+		secondaryContainer.innerHTML = "";
+		this.updateProgress();
 	}
 }
 
@@ -531,10 +641,10 @@ function parseTaskIndex(index) {
 
 /**
  * Create a user card element
- * @param {{username: string, userColor: string}} user
+ * @param {{username: string, userColor: string, tasks: Task[]}} user
  * @returns {HTMLDivElement}
  */
-function createUserCard({ username, userColor }) {
+function createUserCard({ username, userColor, tasks }) {
 	const cardEl = document.createElement("div");
 	cardEl.classList.add("card");
 	cardEl.dataset.user = username;

@@ -59,6 +59,54 @@
 				</div>
 			</div>
 
+			<!-- New Section: Controls for Adding Tasks and Setting Goals -->
+			<div class="controls">
+				<!-- Task Input Form -->
+				<form id="task-form" class="task-form">
+					<input
+						type="text"
+						id="task-name"
+						placeholder="Task Name"
+						required
+					/>
+					<input
+						type="number"
+						id="task-value"
+						placeholder="Task Value"
+						min="1"
+						required
+					/>
+					<button type="submit">Add Task</button>
+				</form>
+
+				<!-- Goal Settings -->
+				<div id="goal-settings" class="goal-settings">
+					<label class="auto-set-label">
+						<input
+							type="checkbox"
+							id="auto-set-goal"
+							checked
+						/>
+						Auto-set Goal based on Total Task Values
+					</label>
+					<div id="manual-goal" class="manual-goal" style="display: none;">
+						<input
+							type="number"
+							id="goal-value"
+							placeholder="Set Goal Value"
+							min="1"
+						/>
+					</div>
+				</div>
+
+				<!-- Progress Bar -->
+				<div id="progress-container" class="progress-container">
+					<div id="progress-bar" class="progress-bar"></div>
+				</div>
+				<p id="progress-text" class="progress-text">0%</p>
+			</div>
+			<!-- End of New Controls Section -->
+
 			<div class="task-wrapper">
 				<div class="task-container primary"></div>
 				<div class="task-container secondary"></div>
@@ -79,5 +127,19 @@
 			</div>	
 		</div>
 
+		<!-- Optional: Include JavaScript for handling the new controls -->
+		<script>
+			// Example: Handling the display of manual goal input
+			document
+				.getElementById('auto-set-goal')
+				.addEventListener('change', function(e) {
+					const manualGoal = document.getElementById('manual-goal');
+					if (e.target.checked) {
+						manualGoal.style.display = 'none';
+					} else {
+						manualGoal.style.display = 'block';
+					}
+			});
+		</script>
 	</body>
 </html>
